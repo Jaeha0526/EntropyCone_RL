@@ -109,7 +109,7 @@ The reward function serves dual purposes:
 
 | Ray | Status | N | Evidence |
 |-----|--------|---|----------|
-| 146 | In HEC | 18 | Graph realization found (reward=0.9997) |
+| 146 | In HEC | 18 | Near-perfect realization (reward=0.99999999) |
 | 180 | In HEC | 14 | **Perfect integer realization** (12:7 weights) |
 | 181 | In HEC | 18 | **Perfect integer realization** (9,6,5,4,0 weights) |
 | 110 | Likely outside | - | max_reward = 0.9998, surrounded by non-HEC rays |

@@ -6,9 +6,23 @@ This folder contains the graph realizations found for SA cone rays that were pre
 
 | Ray | N | Max Reward | Status | Weight Structure |
 |-----|---|------------|--------|------------------|
-| 146 | 18 | 0.9997 | Near-perfect realization | Complex weights |
-| 180 | 14 | 1.0000 | **Perfect realization** | Simple 12:7 ratio |
-| 181 | 18 | 1.0000 | **Perfect realization** | 5 distinct values: 9,6,5,4,0 |
+| 146 | 18 | 0.99999999 | **Near-perfect realization** | Complex (24 dominant + 12 fractional) |
+| 180 | 14 | 1.00000000 | **Perfect realization** | Simple 12:7 ratio |
+| 181 | 18 | 1.00000000 | **Perfect realization** | 5 distinct values: 9,6,5,4,0 |
+
+## Ray 146: Near-Perfect Realization (N=18)
+
+**Key Result:** Reward = 0.9999999938 (8 nines after decimal)
+
+The optimal weight map has a more complex structure than rays 180/181:
+- **Dominant value ~1.2049**: 24 positions
+- **Fractional values (0.1-0.8)**: 12 positions
+- **Zero weights**: 117 positions
+
+The complexity suggests ray 146 may require a more intricate graph structure, but it is definitively inside the HEC.
+
+See [ray146_realization.md](ray146_realization.md) for full analysis.
+Weight data: [ray146_best_weights.json](ray146_best_weights.json)
 
 ## Ray 180: Perfect Integer Realization (N=14)
 
