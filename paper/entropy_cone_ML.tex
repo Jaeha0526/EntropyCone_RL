@@ -1,0 +1,576 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREAMBLE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ 
+\input{setup.sty}
+ 
+ 
+ 
+% Paper Info
+
+\title{Exploring the holographic entropy cone via machine learning}
+ 
+ 
+\author[a]{Temple He,}
+\emailAdd{templehe@caltech.edu}
+ 
+ 
+\author[a]{Jaeha Lee,}
+\emailAdd{jaeha@caltech.edu}
+
+ \author[a, b]{Hirosi Ooguri}
+\emailAdd{ooguri@caltech.edu}
+
+\affiliation[a]{Walter Burke Institute for Theoretical Physics \rm \& \it Leinweber Forum for Theoretical Physics
+\\ California Institute of Technology, Pasadena, CA 91125 USA}
+
+\affiliation[b]{Kavli Institute for the Physics and Mathematics of the Universe \rm (WPI) \\ \it University of Tokyo, Kashiwa 277-8583, Japan}
+
+ 
+ 
+% Abstract
+ 
+\abstract{We develop a reinforcement learning algorithm to study the holographic entropy cone. Given a target entropy vector, our algorithm searches for a graph realization whose min-cut entropies match the target, with a reward defined as the cosine similarity between the achieved and target entropy vectors. If the target lies inside the cone, the algorithm finds an exact realization and the reward reaches its maximum value of $1$; if outside, it finds the graph that approximates the target as closely as possible. This reward serves a dual purpose: its optimized value indicates whether the target lies inside the holographic entropy cone, while its gradient points toward the cone boundary, potentially revealing unknown facets. For the $\sf N=3$ cone, we analytically study the reward landscape and confirm that our algorithm successfully recovers it, demonstrating both classification and the rediscovery of monogamy of mutual information. We then apply the algorithm to the $\sf N=6$ cone,
+analyzing the 6 {\it mystery} extreme rays of the subadditivity cone from \cite{He:2024xzq} that satisfy all known holographic entropy inequalities yet lacked graph realizations. We found realizations for 3 of them, proving they are genuine extreme rays of the holographic entropy cone, while providing evidence that the remaining 3 are not realizable, implying unknown holographic inequalities exist for $\sf N=6$.}
+ 
+
+\draftmode
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% DOCUMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+\begin{document}
+ 
+% Title Page
+ 
+\maketitle
+ 
+
+ 
+\section{Introduction}
+
+The study of the quantum entropy cone (QEC) is an outstanding research program in the field of quantum information theory, and its goal is to fully specify the set of subsystem entropies realizable by a quantum system involving $\N$ parties for any positive integer $\N$. Subadditivity (SA) and strong subadditivity (SSA) are two such inequalities that constrain the subsystem entropies, and by utilizing the purification symmetry, one can also obtain the Araki-Lieb inequality and weak monotonicity. It is known that for $\N=3$ parties these inequalities are both necessary and sufficient to fully specify the QEC \cite{1193790}. However, it is an open question whether there are further inequalities that are obeyed by all quantum states for larger $\N$.
+
+In this paper, we will be focusing on a subset of the QEC known as the holographic entropy cone (HEC). The HEC is a geometric object introduced in \cite{Bao:2015bfa} that fully characterizes the set of allowed entropy vectors associated to holographic states. The study of the HEC is more tractable due to the fact the entropies of holographic states can be computed using Ryu-Takayanagi (RT) surfaces \cite{Ryu:2006bv}. It was further shown in \cite{Bao:2015bfa} that this calculation can be reduced to finding the min cuts of discrete graphs. As a result, one can utilize properties of discrete graphs to prove inequalities that must be obeyed by such min cuts \cite{He:2019ttu, He:2020xuo, Avis:2021xnz, Czech:2021rxe, Fadel:2021urx, Hernandez-Cuenca:2022pst, Hernandez-Cuenca:2023iqh, Bao:2024obe, Bao:2024azn, Bao:2025sjn, Grimaldi:2025jad}, and such inequalities are known as holographic entropy inequalities (HEIs). This line of research has led to the full characterization of the HEC for $\N \leq 5$ \cite{Bao:2015bfa,Hernandez-Cuenca:2019jpv}, and much progress has been made for characterizing the HEC for $\N \geq 6$ \cite{Hernandez-Cuenca:2023iqh, Czech:2022fzb, Czech:2024rco, Bao:2024obe, Bao:2024azn, Bao:2025sjn}. Along the way, by utilizing the max flow-min cut theorem, the min cuts can be equivalently thought of as max flows along the edges of the discrete graph, giving an alternative perspective to computing holographic entanglement entropy using ``bit threads'' \cite{Freedman:2016zud, Headrick:2017ucz, Cui:2018dyq, Harper:2019lff, Headrick:2020gyq, Headrick:2022nbe}. Furthermore, there have been various generalizations of the HEC to allow for an entropy cone that is the closure of realizable entropy vectors beyond holographic states \cite{Bao:2020zgx, Bao:2021gzu, Walter:2020zvt, Bao:2020mqq, He:2023cco, He:2023aif, He:2023rox}. 
+
+Despite our improved understanding of the HEC compared to that of the QEC
+-- 
+and indeed there is now in principle a systematic method of discovering new facets of the HEC \cite{Bao:2024obe, Bao:2024azn, Bao:2025sjn}
+--
+in practice it is still very challenging to fully characterize the HEC for any $\N \geq 6$ by finding all its facets or all its extreme rays due to the combinatorics involved. As the number of parties $\N$ increases, the number of possible inequalities typically grows doubly exponentially,\footnote{The number of subsystem entropies grow exponentially with respect to $\N$, and each entropy inequality involves a subset of such entropies, resulting in another exponential.} it becomes quickly computationally intractable to find new facets of extreme rays of the HEC using brute force. As an example, for $\N=3$ and $\N=4$, there is only one class of HEI (up to permutation and purification symmetry), namely the monogamy of mutual information (MMI) \cite{Hayden:2011ag}. For $\N=5$, there are only five new classes of HEIs \cite{Bao:2015bfa, Hernandez-Cuenca:2019jpv}. However, for $\N=6$, by utilizing numerous clever techniques, \cite{Hernandez-Cuenca:2023iqh} has already discovered over 1800 new classes of HEIs, and it is expected that there are more as-yet-unknown HEIs.
+
+Due to the challenge described above, a fruitful program that has been pursued in recent years is to focus on the extreme rays of the entropy cone that is carved out by all instances of SA alone \cite{Hernandez-Cuenca:2019jpv, Hernandez-Cuenca:2022pst}, and this cone is called the subadditivity cone (SAC). Although this appears to be a severe restriction, there is a conjecture in \cite{Hernandez-Cuenca:2022pst} stating that all the extreme rays of the HEC involving $\N$ parties can be determined from a subset of extreme rays of an SAC involving $\N' \geq \N$ parties. If this is indeed true, a full understanding of the SAC at any $\N'$ will then offer invaluable information of the HEC at lower party numbers. The SAC has many interesting properties that were discovered in \cite{Hernandez-Cuenca:2022pst, He:2022bmi, He:2023cco, He:2023aif, He:2024xzq, Hubeny:2024fjn}. Even if the conjecture of \cite{Hernandez-Cuenca:2022pst} turns out to be false, we can still find new extreme rays of the HEC by first determining the extreme rays of the SAC and then ascertaining which ones are associated to min cuts of discrete graphs.\footnote{Note that any extreme ray of the SAC that is inside the HEC must also be an extreme ray of the HEC. This follows because the HEC lies inside the SAC.} Furthermore, the SAC is an outer bound for the QEC, while the HEC is an inner bound. Therefore, the SAC and HEC together are able to provide both outer and inner bounds to constrain the QEC. 
+
+Our goal in this paper is to introduce a machine learning (ML) algorithm to tackle some of the problems described above. Reinforcement learning (RL) has proven to be an effective framework for exploring high-dimensional search spaces, with notable applications including game playing \cite{Silver:2016AlphaGo}, protein structure prediction \cite{Jumper:2021AlphaFold}, and the discovery of novel mathematical algorithms \cite{Fawzi:2022AlphaTensor}. In the context of theoretical physics and mathematics, RL has been utilized to explore the landscape of string vacua \cite{Halverson:2019branes} and to discover sequences of moves that simplify knots \cite{Gukov:2021unknot}, in both cases significantly outperforming random search methods. The primary advantage of RL lies in its ability to efficiently navigate large combinatorial spaces by learning to preferentially sample regions that yield higher rewards, making it well-suited to problems where the search space grows exponentially and the
+  objective function is non-smooth.
+
+The usage of ML in studying the HEC has surprisingly been relatively uncommon.\footnote{A recent paper that did use reinforcement learning to explore properties of the entropy cone is \cite{Khumalo:2025xfv}. Furthermore, another paper that used artificial intelligence to explore properties of entanglement entropy is \cite{VanRaamsdonk:2025knt}.} Here, we hope to demonstrate that even with a simple vanilla policy \THe{[terminology?]} gradient algorithm, we can discover new aspects of the HEC. Given a target vector $\vec\ent$ in entropy space, our RL algorithm attempts to find a graph whose min-cut entropies match the target. The policy network takes the current graph configuration as input and outputs updated edge weights, with a reward function defined as the cosine similarity between the achieved and target entropy vectors. If the target lies inside the HEC, the algorithm finds an exact realization and the reward reaches its maximum value of $1$; if the target lies outside, the algorithm finds the graph
+that approximates the target as closely as possible. As with all ML procedures, the output has finite numerical precision. However, we can compute the entropy vector analytically from the graph outputted by the algorithm, allowing us to verify that the realization is exact and not an artifact of numerical rounding errors.
+
+A key feature of our approach is that the reward function serves a dual purpose. First, the optimized reward directly indicates classification: an entropy vector achieving the maximum reward of 1 lies inside the HEC, while one with a lower maximal reward lies outside. Second, when the target entropy vector lies outside the cone, the gradient of the reward function points toward the nearest boundary, effectively navigating the agent towards undiscovered facets. We demonstrate both capabilities systematically. As a proof of concept, we apply our algorithm to the $\N=3$ case, where the HEC is completely specified by SA and MMI, and the reward landscape can be computed analytically. This allows us to validate that our RL-trained agents correctly classify extreme rays and that the learned gradient flow aligns with the analytical prediction. In particular, starting from an SAC extreme ray that violates MMI, we show that the gradient accurately points toward the MMI boundary, successfully rediscovering this holographic inequality. We then turn to $\N=6$, where analytical treatment is no longer feasible and RL becomes essential. It was determined in \cite{He:2024xzq} that there are 208 new classes of extreme rays of the SAC satisfying SSA for $\N=6$. Of these 208 rays, there are 6 which are dubbed ``mystery rays.'' These 6 extreme rays satisfy every known holographic entropy inequality for $\N=6$, and yet the authors of \cite{He:2024xzq} could not find a graph realization for these 6 rays. Using our algorithm, we determine that 3 of these 6 mystery rays have graph realizations and are therefore extreme rays of the $\N=6$ HEC as well. As for the other 3, our results suggest they are highly likely not realizable.
+
+Our target audience for this paper is for physicists interested in studying the HEC who may not be as familiar with RL techniques, and therefore we will devote more effort to explain the RL concepts involved. Our outline is as follows. In \Cref{sec:setup}, we will give a brief review of the holographic entropy cone and also present the relevant background in RL and introduce the RL algorithm we use to ascertain whether an extreme ray has a graph realization. In \Cref{sec:mmi}, we present a proof of concept by applying our algorithm to the $\N=3$ case, where we validate the classification capability and demonstrate the gradient-based rediscovery of MMI. In \Cref{sec:realizability}, we apply our algorithm to the $\N=6$ SAC, classifying all 208 extreme rays and resolving the status of the mystery rays. We conclude with some discussions and future directions in \Cref{sec:discussion}. Our code implementing our RL algorithm can be found at \THe{....}.
+
+
+
+
+
+
+
+\section{Setup}\label{sec:setup}
+
+We begin by introducing the necessary prerequisites. In \Cref{ssec:hec}, we will review of the holographic entropy cone (HEC) and standardize the notation we will use. In \Cref{ssec:ml-alg}, we will review the conceptual basis of reinforcement learning, as well as introduce the algorithm we will utilize in our exploration of the HEC.
+
+\subsection{Holographic entropy cone}\label{ssec:hec}
+
+Consider a quantum system with $\N$ parties, labeled by $1, 2,\ldots, \N$.\footnote{For small $\N$, it is also customary to label the parties as $A,B,C,\ldots$.} We can study the entanglement structure of this system by specifying the von Neumann entropy associated to nonempty subsets of the parties, i.e. $\ent(I)$ for $I \subseteq [\N] := \{1,2,\ldots,\N\}$. There are $2^{\N}-1$ such entropies, and therefore we can view the subsystem entropies as components of a vector living in a vector space with $\D = 2^\N-1$ dimensions. Such a vector is called an entropy vector, and the vector space is called the entropy space.
+
+It is clear that not every vector in the entropy space is realizable by a quantum state. For instance, we are restricted to the region of entropy space where the subsystem entropies are all nonnegative, in that
+\begin{align}
+    \ent(I) \geq 0 \quad\text{for all $I \subseteq [\N]$},
+\end{align}
+since the von Neumann entropy is always nonnegative. A natural question is to ask what are the vectors in the entropy space that is realizable by a quantum state. It was shown in \cite{1193790} that the topological closure of all such realizable entropy vectors form a convex cone, and we refer to this cone as the quantum entropy cone (QEC). For $\N = 3$, we can fully characterize the associated QEC. Indeed, we know that entropies of quantum states have to obey four classes of inequalities, which we list below:
+\begin{align}
+    \text{Subadditivity (SA):} \quad & \ent(I) + \ent(J) \geq \ent(IJ) \\
+    \text{Araki-Lieb (AL):} \quad & \ent(I) + \ent(IJ) \geq \ent(J) \\
+    \text{Strong subadditivity (SSA):} \quad & \ent(IJ) + \ent(JK) \geq \ent(J) + \ent(IJK) \\
+    \text{Weak monotonicity (WM):} \quad & \ent(IJ) + \ent(JK) \geq \ent(I) + \ent(K) ,
+\end{align}
+where we use the shorthand $IJ := I \cup J$. These four classes of inequalities hold for every possible subsystem $I,J,K$ and constrain the set of allowable entropy vectors that are realizable by quantum states to be a convex cone. Furthermore, it is also known that every entropy vector within the cone constrained by the inequalities above lies within the topological closure of a realizable entropy vector \cite{1193790}, meaning that the QEC for $\N=3$ is completely specified by the above inequalities. However, for $\N \geq 4$, fully specifying the QEC in terms of a set of inequalities is an open question.
+
+Thus far, we have not utilized the fact that we can purify our system. Consider now a purifier state which states that we can purify our system by adding a purifier state $\N+1$, with the condition that
+\begin{align}
+    \ent(1\cdots\N+1) = 0 .
+\end{align}
+We denote $\uI,\uJ,\ldots$ to be subsets of $[\N+1]$, which includes the purifier, and we define $\uI^c := [\N+1] \setminus \uI$ to be the complement of $\uI$. Purification symmetry is then the property that
+\begin{align}\label{purification-sym}
+    \ent(\uI) = \ent(\uI^c).
+\end{align}
+We can now use \eqref{purification-sym} to verify that the four classes of inequality above can actually be simplified down to two inequalities, namely
+\begin{align}
+    \text{Subadditivity (SA):} \quad & \ent(\uI) + \ent(\uJ) \geq \ent(\uI\uJ) \label{sa} \\
+    \text{Strong subadditivity (SSA):} \quad & \ent(\uI\uJ) + \ent(\uJ\uK) \geq \ent(\uJ) + \ent(\uI\uJ\uK), \label{ssa}
+\end{align}
+where we have now included the purifier. Indeed, AL and WM are related to SA and SSA via purification, respectively.
+
+Due to the challenges facing the complete characterization of the QEC for $\N \geq 4$, we instead focus exclusively on holographic states, which is the subset of quantum states that admit a geometric holographic dual and have entropies that can be computed using RT surfaces \cite{Ryu:2006bv}. The topological closure of entropy vectors realizable by holographic states is the holographic entropy cone (HEC), and it is a convex, polyhedral cone that is within the QEC \cite{Bao:2015bfa, Avis:2021xnz}. We know that the HEC is strictly smaller than the QEC because holographic states obey additional entropy inequalities that could be violated by quantum states. Such inequalities are known as holographic entropy inequalities (HEIs), and they form the facets of the HEC. The most well-known example of such an inequality is the monogamy of mutual information (MMI), which is
+\begin{align}\label{mmi}
+\begin{split}
+    &\text{Monogamy of mutual information (MMI):} \\
+    &\qquad\qquad \ent(\uI\uJ) + \ent(\uI\uK) + \ent(\uJ\uK) \geq \ent(\uI) + \ent(\uJ) + \ent(\uK) + \ent(\uI\uJ\uK).
+\end{split}
+\end{align}
+It has been proven in \cite{Hayden:2011ag, Cui:2018dyq} that \eqref{mmi} is satisfied for all holographic states. On the other hand, it is simple to find a quantum state that violates it. Consider the Greenberger-Horne-Zeilinger (GHZ) state for $\N=3$, which has the subsystem entropies \cite{Greenberger:1989tfe}
+\begin{align}\label{ghz3}
+    \ent(A) = \ent(B) = \ent(C) = \ent(AB) = \ent(AC) = \ent(BC) = \ent(ABC).
+\end{align}
+It follows immediately that MMI is violated, implying that the GHZ state is not holographic. Indeed, one can view MMI as a stronger version of SSA, since MMI and SA together imply SSA.
+
+There has been more progress in the exploration of the HEC than that of the QEC. We know what the HEC is up to $\N=5$ \cite{Bao:2015bfa,Hernandez-Cuenca:2019jpv}, and many facets of the $\N=6$ HEC has been uncovered in recent years \cite{Hernandez-Cuenca:2023iqh}. The primary reason why we are able to such progress is due to the fact that unlike entropy vectors of generic quantum states, we can represent holographic entropy vectors in terms of a discrete graph \cite{Bao:2015bfa}. More concretely, given a holographic entropy vector $\vec\ent$, we can associate to it a graph $\CG = (V,E)$ with vertices $V$ and edges $E$ such that a subset of the vertices $\p V := [\N+1]$, which we call boundary vertices, represent the parties (including the purifier), and each edge carries a weight. The entropy associated to any subsystem of boundary vertices $\uI$ is then given by the min cut that separates $\uI$ from its complement $\uI^c$.\footnote{Alternatively, it was shown in \cite{Freedman:2016zud} that instead of min cuts, one can also work with max flows.} Because of this graph representation of the entropy vector, \cite{Bao:2015bfa} demonstrated that one may use what are known as contraction maps to prove new HEIs. In fact, it was recently shown that every single HEI arises from a contraction map \cite{Bao:2024obe, Bao:2024azn, Bao:2025sjn}. This means that we have a conceptual framework for how to find new HEIs, and that the main bottleneck for such exploration is the large combinatorics involved for even modest number of parties such as $\N=6$. For this reason, the exact specification of the HEC is still a challenging task, and we now turn to introducing the machine learning algorithm we developed to partly help with this task in the next subsection.
+
+
+
+\subsection{Reinforcement learning algorithm}\label{ssec:ml-alg}
+
+In this subsection, we explain the conceptual basis of reinforcement learning (RL) in a manner tailored to the problem studied in this paper. Our aim is to provide theoretical physicists with sufficient intuition to understand why RL is a natural and effective tool for exploring the holographic entropy cone (HEC), without attempting a general or comprehensive introduction to RL. We therefore focus exclusively on aspects of RL that are directly relevant to the task of determining whether a given entropy vector admits a graph realization.
+
+At its core, reinforcement learning is a framework for solving optimization problems in which one seeks to maximize a reward function through a sequence of adaptive decisions. Unlike supervised learning, which relies on a preexisting dataset of labeled examples, RL proceeds by repeatedly proposing candidate solutions, evaluating their quality via a reward, and updating future proposals accordingly. This paradigm is particularly well-suited to the present setting, where the search space is highly combinatorial, the objective function is non-smooth, and there is no natural training set.
+
+\paragraph{Entropy realizability as a search problem.}
+The central computational task in this paper is the following. Given a target entropy vector $\vec\ent^{\rm target}$ in the entropy space of $\N$ parties (including a purifier), we would like to determine whether there exists a weighted graph $\CG$ whose min cuts reproduce $\vec\ent^{\rm target}$. If such a graph exists, the vector lies in the HEC; if not, it does not.
+
+A graph realization consists of $\N+1$ boundary vertices (representing the $\N$ parties plus the purifier) together with $n$ internal vertices, for a total of $\N+1+n$ vertices. Adding more internal vertices increases the realizability power of the graph: it is known that for $\N = 1, 2, 3, 4$, a total of $2, 3, 5, 6$ vertices respectively suffice to realize all entropy vectors inside the HEC \cite{Avis:2021xnz}. In our RL approach, we fix the number of internal vertices $n$ and search over edge weights of a complete graph on all $\N+1+n$ vertices, restricting weights to be non-negative. For the $\N=3$ validation in \Cref{sec:mmi}, we use $n=1$ internal vertex (5 vertices total), which is known to be sufficient. For the $\N=6$ classification in \Cref{sec:realizability}, we explore graphs with up to $n=13$ internal vertices (20 vertices total).
+
+From the RL viewpoint, this question is naturally formulated as a search problem. One begins with an initial graph ansatz and iteratively adjusts the edge weights to reduce the discrepancy between the entropy vector $\vec\ent(\CG)$ induced by the graph and the target vector $\vec\ent^{\rm target}$. Each modification is evaluated, and information gained from this evaluation is used to guide subsequent modifications. RL provides a principled framework for organizing and optimizing this type of adaptive search. However, since the action space grows as $O((\N+1+n)^2)$ with the number of vertices, finding the optimal edge weight configuration becomes increasingly challenging as $n$ increases, even with RL's efficient exploration.
+
+\paragraph{States, actions, and environment.}
+In RL terminology, the \emph{state} encodes the current candidate graph together with its edge weights. The \emph{action space} consists of allowed updates of this state, such as adjusting edge weights or modifying the internal connectivity of the graph while keeping the boundary vertices fixed. The \emph{environment} is the deterministic map that takes a proposed graph to its associated entropy vector by computing the relevant min cuts, and then evaluates a reward based on how close this vector is to $\vec\ent^{\rm target}$.
+
+The core of RL is a neural network called the \emph{policy}, which learns to map states to actions. Given a state, the policy outputs a probability distribution over possible actions, and an action is sampled from this distribution. The training objective is to adjust the network parameters so that the policy selects actions leading to high expected cumulative reward. Through repeated interaction with the environment---proposing actions, observing rewards, and updating the policy---the network gradually learns which modifications to the graph are most likely to improve the reward.
+
+An important feature of this environment is that it is highly non-smooth. The entropy $\ent(I)$ is given by a minimum over cuts, so small changes in edge weights may leave all entropies unchanged until a critical threshold is crossed, at which point the minimizing cut changes discontinuously. Furthermore, changes in graph topology are intrinsically discrete. For these reasons, standard gradient-based optimization techniques are poorly suited to this problem: they require differentiating the reward function with respect to the graph parameters, which is ill-defined when the reward landscape has discontinuities.
+
+RL circumvents this difficulty by never requiring gradients of the reward function itself. Instead, the policy gradient method computes gradients with respect to the \emph{policy parameters} (i.e., the neural network weights), using only the numerical values of rewards obtained from sampled actions. Concretely, the algorithm samples many actions from the current policy, observes which actions lead to higher rewards, and updates the policy to increase the probability of high-reward actions. This approach treats the environment as a black box and remains valid regardless of whether the reward landscape is smooth, discontinuous, or even stochastic.
+
+\paragraph{Reward function and physical meaning.}
+The reward function is where the physics problem is encoded. In our application, we define the reward as the cosine similarity between the target entropy vector and the entropy vector induced by the graph:
+\begin{align}\label{eq:reward-def}
+    r = \frac{\vec\ent^{\rm target} \cdot \vec\ent(\CG)}{\|\vec\ent^{\rm target}\| \, \|\vec\ent(\CG)\|}.
+\end{align}
+Since entropy is non-negative, all components of both vectors lie in the positive orthant, so the reward ranges from $0$ to $1$. The maximum $r = 1$ is achieved if and only if the two vectors are parallel, i.e., $\vec\ent(\CG) = \lambda \vec\ent^{\rm target}$ for some $\lambda > 0$. Since the HEC is a cone, scalar multiples of realizable vectors are also realizable, so achieving $r = 1$ certifies that the target lies inside the HEC. Conversely, if the target lies outside the HEC, no graph can achieve $r = 1$, and the maximum achievable reward indicates how close the target is to the cone boundary. In this way, the abstract RL objective of maximizing reward is directly aligned with the physical goal of finding a graph realization.
+
+This formulation also provides a useful bridge between numerical exploration and exact results. Although the RL algorithm operates with finite numerical precision, any promising output graph can be analyzed independently and exactly: its min cuts can be recomputed analytically, and its edge weights can often be rescaled to rational or integer values. Thus, RL serves as a discovery tool that proposes candidates, while final certification of realizability remains fully analytic.
+
+\section{Proof of Concept: The $\N=3$ Holographic Entropy Cone}\label{sec:mmi}
+
+In this section, we use the $\N=3$ case as a proof of concept for our RL algorithm. The $\N=3$ HEC is sufficiently simple that the reward landscape can be computed analytically, allowing us to validate that our RL algorithm correctly recovers both the classification capability (reward $= 1$ inside the cone) and the gradient-based navigation toward cone boundaries. We will demonstrate that starting from a point outside the HEC, the RL-computed gradient accurately points toward the MMI facet, successfully rediscovering this holographic inequality.
+
+\subsection{Review of the $\N=3$ HEC}\label{ssec:n3-review}
+
+Consider the $\N=3$ holographic entropy cone with parties $A,B,C$ and purifier $O$. The entropy vectors are 7-dimensional, and can be labeled in the following lexicographic manner:\footnote{For arbitrary $\N$, lexicographic ordering means we first write the single-party entropies in alphabetical (or numerical) ordering, followed by the 2-party entropies $AB, AC, \ldots, BC, BD, \ldots$, and so forth.}
+\begin{align}
+    \vec\ent = \big\{ \ent(A) , \ent(B) , \ent(C) ; \ent(AB) , \ent(AC) , \ent(BC) ; \ent(ABC) \big\}.
+\end{align}
+The only holographic entropy inequality for $\N=3$ is the monogamy of mutual information (MMI), namely
+\begin{align}\label{eq:mmi-n3}
+    \ent(AB) + \ent(AC) + \ent(BC) \geq \ent(A) + \ent(B) + \ent(C) + \ent(ABC).
+\end{align}
+Together with subadditivity (SA), these inequalities form the facets of the $\N=3$ HEC. Note that SSA is a positive linear combination of MMI and SA, making it a redundant constraint that can be neglected.
+
+Suppose we do not know MMI and only impose SAs. We can then construct the $\N=3$ subadditivity cone (SAC). It is straightforward to determine the extreme rays of this cone: there are 14 extreme rays (up to permutation and purification symmetry), of which 4 satisfy MMI and lie inside the HEC, while 10 violate MMI and lie outside. One particularly important extreme ray corresponds to the reduced state of the 4-party GHZ state, whose entropy vector is
+\begin{align}\label{eq:ghz-vec}
+    \vec\ent_{\text{GHZ}} = \{1,1,1;1,1,1;1\}.
+\end{align}
+This vector violates MMI with violation $-0.2$ (after normalization), placing it outside the $\N=3$ HEC. Our goal is to demonstrate that starting from this vector, the RL algorithm can navigate toward the HEC boundary and rediscover MMI.
+
+\subsection{Analytical Reward Landscape}\label{ssec:analytical-landscape}
+
+To demonstrate the utility of the reward landscape as a tool for understanding the HEC, we derive closed-form expressions on the $S_3$-symmetric slice of the $\N=3$ entropy space. For $\N=3$, it is known that graphs with 5 vertices suffice to realize all interior points of the HEC \cite{Avis:2021xnz}: 4 boundary vertices (parties $A$, $B$, $C$ and purifier $O$) and 1 internal vertex $X$. Since the HEC is a cone, if $\vec\ent$ is realizable then so is $\lambda\vec\ent$ for any $\lambda > 0$. We therefore work on the unit sphere $\|\vec\ent\|^2 = 1$ without loss of generality, which reduces the dimensionality by one. This analytical treatment reveals how the reward function encodes the cone structure, and in \Cref{ssec:rl-validation} we will verify that our RL algorithm successfully recovers these theoretical predictions.
+
+\paragraph{Symmetric parameterization.}
+We further restrict to the $S_3$-symmetric subspace where all parties are equivalent:
+\begin{align}
+    \vec\ent = (s, s, s, t, t, t, u),
+\end{align}
+with $s = \ent(A) = \ent(B) = \ent(C)$, $t = \ent(AB) = \ent(AC) = \ent(BC)$, and $u = \ent(ABC)$. The unit sphere constraint $3s^2 + 3t^2 + u^2 = 1$ determines $u$ in terms of $(s,t)$:
+\begin{align}\label{eq:u-constraint}
+    u = \sqrt{1 - 3s^2 - 3t^2}.
+\end{align}
+This reduces the 7-dimensional entropy space to a 2-dimensional disk of radius $1/\sqrt{3}$ in the $(s,t)$ plane, as shown in \Cref{fig:st-regions}.
+
+\paragraph{HEC constraints on the symmetric slice.}
+On this symmetric slice, the HEC inequalities reduce to three constraints:\footnote{\THe{Note that SSA is implied by SA and MMI.}}
+\begin{align}
+    \text{Subadditivity (SA):} \quad & t \leq 2s, \label{eq:sa-symmetric}\\
+    \text{Strong subadditivity (SSA):} \quad & u \leq 2t - s, \label{eq:ssa-symmetric}\\
+    \text{Monogamy of mutual information (MMI):} \quad & u \leq 3(t - s). \label{eq:mmi-symmetric}
+\end{align}
+The HEC region is the intersection of these constraints within the valid disk, shown in pink in \Cref{fig:st-regions}.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.65\textwidth]{reward_landscape_neg_log.png}
+    \caption{The $S_3$-symmetric slice of the $\N=3$ entropy space in the $(s,t)$ plane. The color gradient from dark purple to yellow shows $-\log(1 - \text{reward})$, emphasizing structure near the HEC boundary. Pink: inside HEC (reward $= 1$). The black circle is the boundary $u = 0$.}
+    \label{fig:st-regions}
+\end{figure}
+
+\paragraph{Analytical reward formula.}
+Recall from \Cref{ssec:ml-alg} that our reward is the cosine similarity between target and achieved entropy vectors. For unit vectors, this is simply the dot product:
+\begin{align}\label{eq:reward-formula}
+    R = \vec\ent_{\text{target}} \cdot \vec\ent_{\text{achieved}} = 3ss' + 3tt' + uu',
+\end{align}
+where $(s',t',u')$ denotes the achieved entropy vector. If the target lies inside the HEC, the optimal achieved vector is the target itself, giving $R = 1$. If the target lies outside the HEC, the optimal achieved vector is the closest point on the HEC boundary (in the sense of maximizing cosine similarity), giving $R < 1$.
+
+\paragraph{Subadditivity-violated region ($t > 2s$).}
+When the target violates subadditivity, the optimal achieved point lies on the subadditivity boundary $t' = 2s'$. Using Lagrange multipliers (see \Cref{app:analytical-derivations}), the optimal solution is:
+\begin{align}\label{eq:SA-projection}
+    s' = \frac{s + 2t}{D}, \quad t' = 2s', \quad u' = \frac{5u}{D}, \quad \text{where } D = \sqrt{15(s+2t)^2 + 25u^2}.
+\end{align}
+
+\paragraph{MMI-violated region ($u > 3(t-s)$, with $t \leq 2s$).}
+When the target violates MMI but satisfies subadditivity, the optimal achieved point lies on the MMI boundary $u' = 3(t' - s')$. The optimal ratio $\rho = t'/s'$ is given by:
+\begin{align}\label{eq:optimal-rho}
+    \rho = \frac{3s + 4t + u}{4s + 3t - u}.
+\end{align}
+This ratio must satisfy $1 \leq \rho \leq 2$: the lower bound ensures non-negative $u'$, while the upper bound comes from subadditivity. If the computed $\rho$ falls below 1, we set $\rho = 1$; if it exceeds 2, we set $\rho = 2$. The optimal $(s', t', u')$ can then be computed explicitly from $\rho$ (see \Cref{app:analytical-derivations}).
+
+\subsection{RL Validation of Analytical Predictions}\label{ssec:rl-validation}
+
+To validate that our RL algorithm correctly recovers the analytical reward landscape, we sample a grid of points across the symmetric slice and compare the RL-achieved rewards against the analytical predictions.
+
+\subsubsection{RL Training Setup}
+
+For the $\N=3$ validation, we use a graph with 5 vertices: 4 boundary vertices (parties $A$, $B$, $C$ and purifier $O$) and 1 internal vertex $X$. The policy network is a 2-layer feedforward network with 64 hidden units per layer. Training uses a batch size of 60, learning rate $10^{-4}$, rollout length of 50 steps, and a maximum of 2000 iterations per run. We apply exploration noise with standard deviation 0.15 and perturbation size $\delta t = 0.1$ for gradient estimation. Early stopping with patience 5 is enabled to terminate training once convergence is achieved. For each grid point, we perform 20 independent training runs to obtain robust statistics.
+
+\subsubsection{Grid Validation}
+
+\paragraph{Method.}
+We sample a $20 \times 20$ grid of points $(s_i, t_j)$ spanning the valid region of the symmetric slice. For each target entropy vector $(s_i, s_i, s_i, t_j, t_j, t_j, u_{ij})$ with $u_{ij} = (1 - 3s_i^2 - 3t_j^2)^{1/2}$, we run our RL algorithm to find the optimal graph realization. We then compare the RL-achieved reward with the analytically computed reward from \eqref{eq:reward-formula}.
+
+\paragraph{Results.}
+We sample a $20 \times 20$ grid across the symmetric slice, of which 324 points fall within the valid region (satisfying $3s^2 + 3t^2 < 1$). For each valid point, we run 20 independent training runs and record the maximum reward achieved.
+
+The RL-achieved rewards closely follow the analytical reward surface. Across all 324 grid points, we observe a Pearson correlation of $0.996$ between the RL results and the analytical predictions, demonstrating that our algorithm accurately captures the reward landscape. \Cref{fig:rl-3d} visualizes this agreement: the analytical surface (colored mesh with grid lines) is overlaid with RL data points, showing excellent correspondence across the entire domain. The funnel-like structure near the HEC boundary region reflects the logarithmic transformation $\log(1-r)$ used for visualization, which makes small differences visible near $r=1$.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.7\textwidth]{reward_landscape_3d_log_max.png}
+    \caption{3D view of the reward landscape on the $\N=3$ symmetric slice, showing agreement between analytical predictions (surface) and RL results (points). Rewards are plotted as $\log(1-r)$ for visibility near the HEC boundary.}
+    \label{fig:rl-3d}
+\end{figure}
+
+\subsubsection{Classification Ability}
+
+Beyond validating the reward landscape, we examine the classification power of the RL-achieved reward for distinguishing points inside versus outside the HEC. \Cref{fig:rl-sorted} presents a sorted classification view: all 324 grid points are arranged by analytical reward (x-axis) and compared against the maximum RL-achieved reward from 20 runs (y-axis).
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.8\textwidth]{n3_grid_classification_max_sorted.png}
+    \caption{Classification comparison on the $\N=3$ symmetric slice with points sorted by analytical reward. Rewards are plotted as $\log(1-r)$ for visibility near the HEC boundary.}
+    \label{fig:rl-sorted}
+\end{figure}
+
+The classification shows clear separation: points inside the HEC (green) achieve high rewards approaching 1, appearing as large negative values in the $\log(1-r)$ scale, while points outside the HEC (red) achieve lower rewards. In the ideal case, green dots would have arbitrarily large negative values (since $\log(1-r) \to -\infty$ as $r \to 1$ for perfect realizations). However, the RL algorithm does not always achieve this theoretical maximum, and some green dots appear among the red dots.
+
+This limitation has important implications for \Cref{sec:realizability}: when applying our algorithm to classify extreme rays of the $\N=6$ SAC, we cannot conclude with 100\% confidence that an extreme ray is non-realizable based solely on the reward value. Nevertheless, the strong overall separation demonstrates that the reward is a reliable indicator of realizability. Moreover, since our results use the maximum reward from only 20 runs per point, additional independent runs could improve classification power for borderline cases.
+
+\subsection{Gradient-Based Rediscovery of MMI}\label{ssec:mmi-rediscovery}
+
+We now demonstrate the ``navigator'' function of the reward: starting from a point outside the HEC, the gradient points toward undiscovered facets.
+
+\paragraph{Analytical gradient.}
+For points outside the HEC, the gradient of the reward with respect to the target position points toward the HEC boundary. In the $(s,t)$ parameterization:
+\begin{align}\label{eq:gradient-formula}
+    \frac{\partial R}{\partial s} = 3s' - \frac{3su'}{u}, \quad \frac{\partial R}{\partial t} = 3t' - \frac{3tu'}{u}.
+\end{align}
+Crucially, for targets in the MMI-violated region, this gradient points toward the MMI boundary, as visualized by the arrows in \Cref{fig:gradient-landscape}.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.75\textwidth]{reward_landscape_with_gradient.png}
+    \caption{Reward landscape of $\N=3$ entropy space with gradient field, \THe{constrained to entropy vectors of the form $\vec \ent = (s,s,s,t,t,t,u)$ and $s^2+t^2 +u^2 = 1$ (hence the apparent nonlinearity of the constraints in the plot)}. Arrows show the direction of steepest reward increase, colored by magnitude. The gradient consistently points toward the nearest HEC boundary.}
+    \label{fig:gradient-landscape}
+\end{figure}
+
+\paragraph{Experiment setup.}
+We begin with the normalized GHZ entropy vector $\vec\ent_{\text{GHZ}}$, which lies in the MMI-violated region (outside the pink HEC area in \Cref{fig:st-regions}). Using our RL algorithm with gradient estimation via random orthogonal perturbations, we iteratively move in the direction of the reward gradient while respecting known SA constraints.
+
+\paragraph{Results.}
+\JL{[To be filled in after running experiments. Expected: the trajectory moves toward the MMI boundary, and the gradient direction aligns with the MMI facet normal vector $(-1,-1,-1,1,1,1,-1)$.]}
+
+\paragraph{Implications.}
+This proof of concept demonstrates that our RL algorithm can both classify entropy vectors (via the reward value) and discover unknown facets (via the gradient direction). The analytical tractability of the $\N=3$ case allows us to validate both capabilities. In the next section, we apply the algorithm to $\N=6$, where analytical treatment is no longer feasible and RL becomes essential for exploring the cone structure.
+
+\section{Proving realizability of SAC extreme rays for $\N=6$}\label{sec:realizability}
+
+\subsection{The 6 Mystery Rays}\label{ssec:mystery-rays}
+
+We now turn to the $\N=6$ HEC, where both analytical treatment and traditional combinatorial search methods become intractable, making reinforcement learning an essential tool for exploring the cone structure. In \cite{He:2024xzq}, the authors study the $\N=6$ SAC and determined its extreme rays. Excluding extreme rays that are uplifts of the SAC for fewer number of parties, there are 208 orbits of genuinely new extreme rays satisfying SSA, where each orbit is labeled by a representative ray, and all other extreme rays in that orbit can be obtained via permutation and purification symmetry. As expected, many of these extreme rays are not extreme rays of the HEC since they violate one of the known HEIs. However, there are 156 orbits that are candidates for extreme rays of the HEC, as they do not violate any known HEI. The graph realizations of 150 of these 156 orbits were found in \cite{He:2024xzq}, proving that they belong in the HEC and are extreme rays of the $\N=6$ HEC. However, \cite{He:2024xzq} could not find any graph realizations of the 6 remaining rays and dubbed them ``mystery rays.'' In this paper, we focus on these 6 mystery rays, which are given in \Cref{tab:mystery}.
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+{\small ER\#} & {\small $\vec \ent$ components} \\
+\hline
+\textbf{110} & \tiny{\{1,1,2,2,2,2; 2,3,3,3,3,3,3,3,3,4,4,4,4,4,4; 4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,4,4,6,6; 6,4,4,6,6,6,5,5,5,5,5,5,5,5,4; 4,4,4,4,3,3; 2\}} \\
+\hline
+\textbf{145} & \tiny{\{2,2,2,3,3,3; 4,4,5,5,5,4,5,5,5,5,5,5,6,6,6; 6,7,7,7,7,7,7,6,6,8,7,7,7,8,8,6,8,8,8,9; 9,9,9,8,8,8,8,8,8,7,6,6,8,7,7; 6,6,6,5,5,5; 3\}} \\
+\hline
+\textbf{146} & \tiny{\{2,2,2,3,3,3; 4,4,5,5,5,4,5,5,5,5,5,5,6,6,6; 6,7,7,7,7,7,7,6,6,8,7,7,7,8,8,6,8,8,8,9; 9,9,9,8,8,8,8,8,6,7,6,8,8,7,7; 6,6,6,5,5,5; 3\}} \\
+\hline
+\textbf{168} & \tiny{\{2,2,2,3,3,3; 4,4,5,5,5,4,5,5,5,5,5,5,6,6,6; 6,7,7,7,7,7,7,6,6,8,7,7,7,8,8,6,8,8,8,9; 9,9,9,8,8,8,8,8,6,7,6,6,8,7,7; 6,6,6,5,5,5; 3\}} \\
+\hline
+\textbf{180} & \tiny{\{2,2,2,3,3,3; 4,4,5,5,5,4,5,5,5,5,5,5,6,6,6; 6,7,7,7,7,7,7,6,6,8,7,7,7,8,8,6,8,8,8,9; 9,9,9,8,8,8,6,8,6,7,8,6,8,7,7; 6,6,6,5,5,5; 3\}} \\
+\hline
+\textbf{181} & \tiny{\{2,2,2,3,3,3; 4,4,5,5,5,4,5,5,5,5,5,5,6,6,6; 6,7,7,7,7,7,7,6,6,8,7,7,7,8,8,6,8,8,8,9; 9,9,9,6,8,8,8,8,6,7,8,6,8,7,7; 6,6,6,5,5,5; 3\}} \\
+\hline
+\end{tabular}
+\caption{We list the 6 mystery rays corresponding to the green rows from Table 4 of \cite{He:2024xzq}, keeping the original extreme ray (ER) numbering. The entropy vector components are arranged first by cardinality of the subsystem, and then in lexicographic order.}
+\label{tab:mystery}
+\end{table}
+
+\subsection{RL Training Setup}\label{ssec:n6-setup}
+
+We want to use our RL algorithm to determine whether any of these extreme rays have a graph realization. If there exists such graph realization, it must have 7 boundary vertices, which correspond to the 6 parties plus a purifier, as well as $n$ internal vertices.
+
+For the $\N=6$ classification, we vary $n$ from 2 to 13 internal vertices, corresponding to total vertex counts $N=9$ to $N=20$. The policy network is a 4-layer feedforward network with 128 hidden units per layer. Training uses a batch size of 120, learning rate $10^{-4}$, rollout length of 100 steps, and a maximum of 3000 iterations per run. Early stopping with patience 7 is enabled. For each extreme ray and each value of $N$, we perform 20 independent training runs. For $N=9$, $12$, and $15$, we run all 208 extreme rays; for other values of $N$, we focus on the 6 mystery rays and selected candidates. To obtain robust statistics, we pool results across all $N$ values, yielding a total of over 7,600 individual runs across the 208 extreme rays.
+
+By designating each of the extreme rays in \Cref{tab:mystery} as a target vector $\vec v$, we run the algorithm such that it attempts to find a graph with $n$ internal vertices whose min cuts reproduces $\vec v$. Naturally, there are numerical errors associated to such a search, and our RL output is only a weight vector \THe{[introduce weight vector in sec on algo]} whose min cuts are approximately $\vec v$. Importantly, however, once we have a candidate graph, it is easy to rescale the weights to integer values and check if the resultant graph has min cuts that is \emph{exactly} $\vec v$.\footnote{For this task, we use a \texttt{Mathematica} script written by Massimiliano Rota as an independent check of our \texttt{Python} code written by \texttt{Claude}.}
+
+\subsection{Graph Realizations Found}\label{ssec:realizations}
+
+Applying this procedure to extreme rays 180 and 181, we are able to obtain in each case a weight vector associated to a graph whose edge weights are easily rescaled to be integers. The resultant graphs for extreme rays 180 and 181 are the first two graphs shown in \Cref{fig:graph_realizations}, respectively. Furthermore, for extreme ray 146, the RL algorithm also outputs a graph whose associated entropy vector is extremely close to the target entropy vector. However, it was more difficult to immediately guess how to rescale the edge weights to be integers that exactly reproduces extreme ray 146. Nevertheless, it was clear from the RL output how many internal vertices we need, which edges are present, and which edges have the same weight. Using these data, it was relatively straightforward to use trial and error to figure out a graph whose edge weights are integers and also exactly reproduces extreme ray 146. The resultant graph is the third graph shown in \Cref{fig:graph_realizations}.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.97\textwidth]{graph_realizations.png}
+    \caption{The graph realizations of extreme rays 146, 180, and 181.}
+    \label{fig:graph_realizations}
+\end{figure}
+
+\subsection{Classification of All 208 Rays}\label{ssec:classification}
+
+Finally, we address the remaining 3 extreme rays 110, 145, and 168. The drawback of our algorithm is that because we are confined to a specific number of graph vertices, we cannot practically conclude with certainty that an extreme ray is not realizable by a graph, as we can always add additional internal vertices.\footnote{There is an upper bound on the number of internal vertices necessary for any fixed $\N$, but this limit is \THe{...} and is not practical.} Therefore, even though we have been unable to find a graph with $n \leq 13$ internal vertices, it is possible that if we included more internal vertices, we could potentially find a graph realization.
+
+Nevertheless, we now provide some evidence suggesting that the remaining 3 mystery extreme rays are actually not realizable. Again using our RL algorithm, except this time applying it to all 208 extreme rays found in \cite{He:2024xzq}, we plot the final reward output for each of these rays. The result is shown in \Cref{fig:208_class}. In this graph, the red crosses are associated to the 52 non-holographic extreme rays as they each violate a HEI. The blue dots represent the 150 holographic extreme rays, whose graph realizations were found in \cite{He:2024xzq}. Finally, the 6 stars the mystery extreme rays that we have been focused on in this paper. As is clear, 3 of the 6 mystery extreme rays are completely surrounded by holographic extreme rays, and these are precisely the extreme rays 146, 180, and 181 that we found graph realizations, which is shown in \Cref{fig:graph_realizations}. However, the remaining 3 mystery rays are surrounded by extreme rays that violate some HEI, and therefore constitute evidence that they may perhaps also be non-holographic. We leave a conclusive classification of these remaining 3 extreme rays for future work.
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{208_ray_classification.png}
+    \caption{The maximum reward (pooled across multiple runs and $N$ values) associated to all 208 representatives of the $\N=6$ SAC extreme ray orbits. The red crosses denote extreme rays that are not realizable, while the blue dots denote the realizable extreme rays. The stars denote the 6 mystery extreme rays. Notice that there are 3 stars that are surrounded by blue dots, and these are precisely the extreme rays 146, 180, and 181 that we found realizations for in this paper. The remaining 3 mystery extreme rays are surrounded by red crosses, leading us to suspect they may not be genuine extreme rays of the $\N=6$ HEC.}
+    \label{fig:208_class}
+\end{figure}
+
+
+
+
+\section{Discussion}\label{sec:discussion}
+
+In this paper, we construct a simple RL algorithm to explore properties of the HEC. The purpose of the algorithm is to determine whether a particular target entropy vector can be associated to the min cuts of a graph with a fixed number of boundary and internal vertices. As a proof of principle, we applied the algorithm to the extreme rays of the $\N=3$ SAC (up to purification and permutation symmetry). Of these extreme rays, the one corresponding to the 4-party pure GHZ state is known to be not realizable by a graph and is therefore non-holographic. Beginning with this non-holographic extreme ray, we move towards the HEC facet in entropy space through a series of iterations that increase the reward function. At a certain point, there will be a phase transition in the reward function, as we move from outside the HEC to inside the HEC. By assuming that the direction of steepest ascent of the reward function is orthogonal to the facet, we are able to determine that the facet corresponding to the phase transition of the reward function is precisely MMI. 
+
+Next, we shift our focus to the $\N=6$ HEC. The power of our RL algorithm is determining a graph realization of entropy vectors that are holographic. We therefore apply it to the extreme rays of the $\N=6$ SAC that are compatible with SSA, which were determined in \cite{He:2024xzq}. There are 208 such orbits of extreme rays, and while \cite{He:2024xzq} was able to ascertain that 150 of them are holographic and 52 of them are not, there are 6 orbits that remain uncertain. Using our algorithm, we determine in this paper that 3 of them are can be realized holographically, albeit via rather complicated graphs (see \Cref{fig:graph_realizations}), and therefore these graph realizations were not found in \cite{He:2024xzq}. As for the remaining 3 orbits, we provide evidence that they are in fact not realizable by any graph construction (see \Cref{fig:208_class}).
+
+There are several natural directions to pursue that will allow our algorithm to be more sophisticated and computationally more powerful. For instance, in our construction of possible graph realizations, our algorithm initiates the search with complete graphs. However, as was observed in \cite{Bao:2015bfa}, there are many graphs that give rise to the exact same entropy vector. If we can modify our algorithm to efficiently eliminate this redundancy, we would be able to speed up our efficiency in constructing possible graphs associated to a target entropy vector. 
+
+Furthermore, we can restrict ourselves to determining whether an entropy vector can be realized by not just any graph, but a tree graph. It was originally observed in \cite{Hernandez-Cuenca:2022pst} that all extreme rays of the $\N=5$ HEC can be realized by such tree graphs, and \cite{Hernandez-Cuenca:2022pst} further conjectured that this is true for any $\N$. By restricting ourselves to applying our RL algorithm to tree graphs only, we can attempt to find whether the known extreme rays of HEC at $\N=6$ can all be realized by tree graphs. Indeed, of the 150 classes of extreme rays of the $\N=6$ SAC that have a graph realization found in \cite{He:2024xzq}, 148 of them have tree graph realizations. It would be instructive to determine if the final 2 extreme rays also have a tree graph realization, potentially complementing the efficient algorithm developed in \cite{Hubeny:2024fjn, Hubeny:2025bjo, Hubeny:2025hst} to find tree graph realizations of entropy vectors.
+
+Finally, we would also like to increase our precision of determining facets in the manner described in \Cref{sec:mmi}. While we were able to use RL to rediscover MMI for $\N=3$, it becomes more challenging to discover genuine new facets of the HEC at $\N=6$. Conceptually, we hope to repeat our search in \Cref{sec:mmi} by beginning with the 52 known non-holographic orbits of extreme rays (but still compatible with SSA) of the $\N=6$ SAC. Each representative of these 52 orbits lie outside the $\N=6$ HEC, and by moving in the direction in entropy space that increases the reward function, we will be moving towards the HEC. Upon crossing the facet of the HEC, we expect to see a phase transition in the reward function similar to that observed in \Cref{sec:mmi}. We hopen then to conclude that the hyperplane orthogonal to the direction of steepest ascent of the reward function at the phase transition corresponds to a new $\N=6$ HEI. Practically speaking, however, to ascertain that this hyperplane indeed corresponds to a new HEI, we first need to eliminate any numerical errors that arises in the search process. Furthermore, as \cite{Bao:2024azn, Bao:2025sjn} argue, every HEI must arise from a contraction map, meaning that we must determine the contraction map that gives rise to our candidate HEI. Finally, the existence of this candidate HEI implies that there are holographic entropy vectors that saturate it. We leave a more sophisticated search for new HEIs using RL for future work.
+
+
+
+
+%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\acknowledgments
+%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+We would like to thank Sergio Hern\'{a}ndez-Cuenca \THe{xxx} for useful discussions. This work is supported in part by the Walter Burke Institute for Theoretical Physics and the Leinweber Forums for Theoretical Physics at Caltech and by the U.S. Department of Energy, Office of Science, Office of High Energy Physics, under Award Number DE-SC0011632.  
+T.H. is also supported by the Heising-Simons Foundation “Observational Signatures of Quantum Gravity” collaboration grant 2021-2817. H.O. is also supported in part by the Simons Investigator Award (MP-SIP-00005259) and JSPS Grants-in-Aid for Scientific Research 23K03379.
+His work was performed in part at the Kavli Institute for the Physics and Mathematics of the Universe at the University of Tokyo, which is supported by the World Premier International Research Center Initiative, MEXT,
+Japan, at the Kavli Institute for Theoretical Physics (KITP) at the University of California, Santa Barbara, which is supported by NSF grant PHY-2309135, at the Aspen Center for Physics, which is supported by NSF
+grant PHY-1607611, and Pioneering Science Promotion Division of RIKEN.
+
+
+\appendix
+
+\section{Analytical Derivations for the $\N=3$ Symmetric Case}\label{app:analytical-derivations}
+
+This appendix provides rigorous derivations of the optimal projection formulas used in \Cref{sec:mmi}, including proofs of optimality using Lagrange multipliers and second-order conditions.
+
+\subsection{Problem Statement}\label{app:problem}
+
+\paragraph{Given.} Target entropy vector $\vec\ent_{\text{target}} = (s, s, s, t, t, t, u)$ with $\|\vec\ent\|^2 = 3s^2 + 3t^2 + u^2 = 1$.
+
+\paragraph{Find.} Optimal achievable $\vec\ent' = (s', s', s', t', t', t', u')$ that maximizes cosine similarity, namely
+\begin{align}\label{eq:app-maximize}
+    \max_{s', t', u'} \quad R = 3ss' + 3tt' + uu' ,
+\end{align}
+subject to:
+\begin{enumerate}
+    \item $3s'^2 + 3t'^2 + u'^2 = 1$ (unit sphere)
+    \item $t' \leq 2s'$ (subadditivity)
+    \item $u' \leq 2t' - s'$ (SSA)
+    \item $u' \leq 3(t' - s')$ (MMI)
+    \item $s', t', u' \geq 0$
+\end{enumerate}
+
+\subsection{Case 1: Target Inside HEC}\label{app:case1}
+
+\paragraph{Condition.} Target $(s, t, u)$ satisfies all HEC inequalities: $t \leq 2s$, $u \leq 2t - s$, and $u \leq 3(t - s)$.
+
+\paragraph{Claim.} The optimal solution is $\vec\ent' = \vec\ent_{\text{target}}$, achieving $R = 1$.
+
+\paragraph{Proof.} By the Cauchy--Schwarz inequality, we have for unit vectors
+\begin{align}\label{eq:cs-ineq}
+    R = \vec\ent_{\text{target}} \cdot \vec\ent' \leq \|\vec\ent_{\text{target}}\| \cdot \|\vec\ent'\| = 1,
+\end{align}
+with equality if and only if $\vec\ent' = \vec\ent_{\text{target}}$. Since the target satisfies all constraints, it is in the feasible region, so the maximum is achieved at the target itself with $R = 1$. $\square$
+
+\subsection{Case 2: Subadditivity Violated ($t > 2s$)}\label{app:case2}
+
+\paragraph{Condition.} $t > 2s$ (subadditivity constraint is active at optimum).
+
+\paragraph{Active constraint.} $t' = 2s'$.
+
+\paragraph{Justification.} When the target violates subadditivity, the unconstrained optimum would be the target itself (by the Cauchy--Schwarz inequality \eqref{eq:cs-ineq}). However, this point is infeasible. The gradient of the reward function $\nabla R = (3s, 3t, u)$ points toward the target, and since the target has $t/s > 2$, this gradient pushes toward the infeasible region. The optimum must therefore lie on the subadditivity boundary $t' = 2s'$.
+
+\paragraph{Substitution.} With $t' = 2s'$, the sphere constraint becomes $15s'^2 + u'^2 = 1$.
+
+\paragraph{Reduced problem.}
+\begin{align}\label{eq:app-R-SA}
+    \max_{s', u'} \quad R = (3s + 6t)s' + uu' \quad \text{subject to} \quad 15s'^2 + u'^2 = 1 \text{ and } u' \leq 3s'.
+\end{align}
+
+\paragraph{Lagrangian.}
+\begin{align}
+    \mathcal{L} = (3s + 6t)s' + uu' - \lambda(15s'^2 + u'^2 - 1).
+\end{align}
+
+\paragraph{First-order conditions.}
+\begin{align}
+    \frac{\partial \mathcal{L}}{\partial s'} = 3s + 6t - 30\lambda s' = 0 \quad &\implies \quad s' = \frac{s + 2t}{10\lambda} \\
+    \frac{\partial \mathcal{L}}{\partial u'} = u - 2\lambda u' = 0 \quad &\implies \quad u' = \frac{u}{2\lambda}.
+\end{align}
+
+\paragraph{Solution.} Substituting into $15s'^2 + u'^2 = 1$ and solving for $\lambda$:
+\begin{align}
+    \lambda = \frac{\sqrt{15(s+2t)^2 + 25u^2}}{10}.
+\end{align}
+This yields:
+\begin{align}\label{eq:app-SA-sol}
+    s' = \frac{s + 2t}{\sqrt{15(s+2t)^2 + 25u^2}}, \quad t' = 2s', \quad u' = \frac{5u}{\sqrt{15(s+2t)^2 + 25u^2}}.
+\end{align}
+
+\paragraph{Second-order condition.} The bordered Hessian analysis confirms this is a maximum since the determinant is positive for $\lambda > 0$ and $s', u' > 0$.
+
+\paragraph{Feasibility check.} The interior solution requires $u' \leq 3s'$, which gives $5u \leq 3(s + 2t)$. If $5u > 3(s + 2t)$, the optimum is at the corner where both subadditivity and MMI bind, \THe{namely $u' = 3s'$. This in turn implies on the unit sphere $24s'^2 = 1$, resulting in} 
+\begin{align}\label{eq:corner-solution}
+    s' = \frac{1}{2\sqrt{6}}, \quad t' = \frac{1}{\sqrt{6}}, \quad u' = \frac{3}{2\sqrt{6}}.
+\end{align}
+
+\subsection{Case 3: MMI Violated ($u > 3(t-s)$, with $t \leq 2s$)}\label{app:case3}
+
+\paragraph{Condition.} $u > 3(t - s)$ and $t \leq 2s$.
+
+\paragraph{Active constraint.} $u' = 3(t' - s')$.
+
+\paragraph{Important note.} Even if the target violates SSA ($u > 2t - s$), the optimal achievable point is on the MMI boundary, not the SSA boundary. This is because the $n=5$ graph cannot achieve the SSA boundary except at the corner, as proven in \Cref{app:ssa-proof}.
+
+\paragraph{Reduction to single variable.} Let $\rho = t'/s'$. Then $t' = \rho s'$ and $u' = 3(\rho - 1)s'$. The unit sphere constraint is now given by
+\begin{align}
+    s' = \frac{1}{\sqrt{6(2\rho^2 - 3\rho + 2)}}.
+\end{align}
+
+\paragraph{Optimization over $\rho$.} Setting $A = s - u$ and $B = t + u$, the reward \eqref{eq:app-maximize} becomes
+\begin{align}\label{eq:app-R-MMI}
+    R = \frac{3(A + B\rho)}{\sqrt{6(2\rho^2 - 3\rho + 2)}}.
+\end{align}
+Taking the derivative and setting it to zero yields
+\begin{align}\label{eq:optimal-rho-derivation}
+    \rho = \frac{3s + 4t + u}{4s + 3t - u}.
+\end{align}
+
+\paragraph{Validity range.} The ratio $\rho$ must satisfy $1 \leq \rho \leq 2$. \THe{The lower bound follows from requiring $s',t',u'>0$, and the upper limit follows from subadditivity.}
+\begin{itemize}
+    \item At $\rho = 1$: $u' = 0$, point on $t' = s'$ line.
+    \item At $\rho = 2$: $t' = 2s'$, corner with subadditivity.
+\end{itemize}
+If computed $\rho < 1$, \THe{instead impose \sout{clamp to}} $\rho = 1$. If \THe{computed} $\rho > 2$, \THe{instead impose $\rho=2$ and} use the corner solution \eqref{eq:corner-solution}.
+
+\paragraph{Final formulas.}
+\begin{align}
+    \rho &= \frac{3s + 4t + u}{4s + 3t - u} \quad \text{(clamped to $\rho \in [1, 2]$)} \\
+    s' &= \frac{1}{\sqrt{6(2\rho^2 - 3\rho + 2)}}, \quad t' = \rho s', \quad u' = 3(\rho - 1)s'.
+\end{align}
+
+\subsection{SSA Boundary Not Achievable with $n=5$ Graph}\label{app:ssa-proof}
+
+\paragraph{Claim.} The entropy vector $(s', t', u')$ with $u' = 2t' - s'$ and $t' < 2s'$ cannot be realized by any non-negative weight configuration on the $n=5$ graph. \THe{[Are you essentially reproving why MMI is an HEI for this special symmetric case? If so, do you think this is helpful?]}
+
+\paragraph{Proof.} Using the symmetric weight parameterization $(\alpha, \beta, \gamma, \delta)$ where $\alpha = w_{AX} = w_{BX} = w_{CX}$, $\beta = w_{OX}$, $\gamma = w_{AB} = w_{AC} = w_{BC}$, and $\delta = w_{AO} = w_{BO} = w_{CO}$:
+\begin{itemize}
+    \item $s' = 2\gamma + \delta + \alpha$
+    \item $t' = 2\gamma + 2\delta + \alpha + \min(\alpha, \beta)$
+    \item $u' = 3\delta + \min(3\alpha, \beta)$
+\end{itemize}
+
+We analyze all possible regimes:
+
+\paragraph{Case A: $\alpha \leq \beta$.} Then $t' = 2\gamma + 2\delta + 2\alpha$, giving $t' - s' = \delta + \alpha$.
+
+If $3\alpha \leq \beta$: $u' = 3\delta + 3\alpha = 3(t' - s')$. The SSA condition $u' = 2t' - s' = s' + 2(t' - s')$ then requires $s' + 2(t'-s') = 3(t'-s')$, i.e., $t' = 2s'$, contradicting $t' < 2s'$.
+
+If $3\alpha > \beta$: $u' = 3\delta + \beta$. From $u' = s' + 2(\delta + \alpha)$, we get $\beta = 2\gamma + 3\alpha$. But $3\alpha > \beta = 2\gamma + 3\alpha$ implies $\gamma < 0$, a contradiction.
+
+\paragraph{Case B: $\alpha > \beta$.} Then $t' = 2\gamma + 2\delta + \alpha + \beta$, giving $t' - s' = \delta + \beta$.
+
+If $3\alpha \leq \beta$: This contradicts $\alpha > \beta$.
+
+If $3\alpha > \beta$: $u' = 3\delta + \beta$. The SSA condition gives $3\delta + \beta = 2\gamma + 3\delta + \alpha + 2\beta$, which requires $\gamma = \alpha = \beta = 0$. But then $\alpha > \beta$ is violated.
+
+\paragraph{Conclusion.} In all cases, achieving the SSA boundary with $t' < 2s'$ leads to a contradiction. The only SSA-tight point achievable by the $n=5$ graph is the corner \eqref{eq:corner-solution}, where $t' = 2s'$. $\square$
+
+\subsection{Explicit Reward Formulas}\label{app:reward-formulas}
+
+\paragraph{MMI projection reward.} For targets in the MMI-violated region, \THe{we have by \eqref{eq:app-R-MMI}}
+\begin{align}
+    R_{\text{MMI}} = \frac{3[s + (t + u)\rho - u]}{\sqrt{6(2\rho^2 - 3\rho + 2)}},
+\end{align}
+where $\rho$ is given by \eqref{eq:optimal-rho-derivation}.
+
+\paragraph{Subadditivity projection reward.} For targets in the subadditivity-violated region, \THe{we have upon substituting \eqref{eq:app-SA-sol} into \eqref{eq:app-R-SA}}
+\begin{align}
+    R_{\text{SA}} = \frac{3(s+2t)^2 + 5u^2}{\sqrt{15(s+2t)^2 + 25u^2}}.
+\end{align}
+
+\subsection{Summary of Projection Formulas}\label{app:summary}
+
+We summarize the optimal projection for each region of the $(s, t)$ plane:
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Region} & \textbf{Condition} & \textbf{Optimal $(s', t', u')$} \\
+\hline
+Inside HEC & All satisfied & $(s, t, u)$ \\
+\hline
+Subadditivity & $t > 2s$, $5u \leq 3(s+2t)$ & $D = \sqrt{15(s+2t)^2 + 25u^2}$ \\
+(interior) & & $s' = \frac{s+2t}{D}$, $t' = 2s'$, $u' = \frac{5u}{D}$ \\
+\hline
+Subadditivity & $t > 2s$, $5u > 3(s+2t)$ & $s' = \frac{1}{2\sqrt{6}}$, $t' = \frac{1}{\sqrt{6}}$, $u' = \frac{3}{2\sqrt{6}}$ \\
+(corner) & & \\
+\hline
+MMI or SSA & $u > 3(t-s)$ or $u > 2t-s$, & $\rho = \frac{3s+4t+u}{4s+3t-u}$, $s' = \frac{1}{\sqrt{6(2\rho^2-3\rho+2)}}$, \\
+violated & with $t \leq 2s$ & $t' = \rho s'$, $u' = 3(t'-s')$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\noindent All formulas are proven optimal via Lagrange multipliers with verified second-order conditions. $\square$
+
+
+\bibliography{entropy-cone-bib}{}
+\bibliographystyle{utphys}
+
+
+\end{document}

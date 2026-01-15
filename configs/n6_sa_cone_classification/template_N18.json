@@ -1,0 +1,36 @@
+{
+  "experiment": {
+    "name": "SA Cone Ray PLACEHOLDER HEC Classification (N=18, MultiRun10)",
+    "description": "Classify SA cone ray PLACEHOLDER from 208 extremal rays with 20 independent runs",
+    "output_dir": "results/sa_cone_N18_experiment_multirun10_2/sa_rayPLACEHOLDER_N18",
+    "target_ray_index": PLACEHOLDER,
+    "target_ray_source": "sa_cone"
+  },
+  "training": {
+    "n": 6,
+    "N": 18,
+    "batch_size": 120,
+    "lr": 0.0001,
+    "n_iter": 3000,
+    "hidden_dim": 128,
+    "num_layers": 4,
+    "rollout_length": 100,
+    "dt": 1.0,
+    "epsilon": 0.1,
+    "factor": 0.7,
+    "keep_best_n": 15,
+    "exploration_noise": 0.2,
+    "normalize_weights": true,
+    "enable_early_stopping": true,
+    "early_stop_patience": 7,
+    "multi_run": true,
+    "num_runs": 20,
+    "skip_gradient": true
+  },
+  "environment": {
+    "device": "cuda",
+    "seed": 42,
+    "num_workers": 1,
+    "precision": "float64"
+  }
+}

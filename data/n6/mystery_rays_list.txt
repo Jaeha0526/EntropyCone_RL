@@ -1,0 +1,8 @@
+# SA Cone rays of special interest
+# These rays are being investigated for specific properties
+110
+145
+146
+168
+180
+181

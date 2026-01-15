@@ -1,0 +1,36 @@
+{
+  "description": "6 mystery rays from the N=6 SA cone that satisfy all known HEIs but lacked initial graph realizations",
+  "rays": [110, 145, 146, 168, 180, 181],
+  "found_realizations": {
+    "146": {
+      "N": 18,
+      "status": "Graph realization found via RL",
+      "notes": "Required careful weight rescaling from RL output"
+    },
+    "180": {
+      "N": 14,
+      "status": "Graph realization found",
+      "notes": "2 non-zero weight values"
+    },
+    "181": {
+      "N": 18,
+      "status": "Perfect realization found",
+      "notes": "5 non-zero weight values, reward = 1.0"
+    }
+  },
+  "likely_non_realizable": {
+    "110": {
+      "max_reward": 0.9997577,
+      "evidence": "Surrounded by non-HEC rays in reward space"
+    },
+    "145": {
+      "max_reward": 0.9995646,
+      "evidence": "Surrounded by non-HEC rays in reward space"
+    },
+    "168": {
+      "max_reward": 0.9995010,
+      "evidence": "Surrounded by non-HEC rays in reward space"
+    }
+  },
+  "source": "He:2024xzq Table 4 (green rows)"
+}

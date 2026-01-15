@@ -1,0 +1,38 @@
+{
+  "experiment": {
+    "name": "N=3 Symmetric Grid Validation v6 (s=S_PLACEHOLDER, t=T_PLACEHOLDER)",
+    "description": "Section 3.3: Validate RL with dt=0.1 (seed=999, 20 runs per point)",
+    "output_dir": "results/experiment_for_3-3/n3_grid_validation_v6/point_IDX_PLACEHOLDER",
+    "target_ray_source": "custom",
+    "w_optimal": VECTOR_PLACEHOLDER,
+    "point_id": IDX_PLACEHOLDER,
+    "run_name": "n3_grid_point_IDX_PLACEHOLDER"
+  },
+  "training": {
+    "n": 3,
+    "N": 5,
+    "batch_size": 60,
+    "lr": 0.0001,
+    "n_iter": 2000,
+    "hidden_dim": 64,
+    "num_layers": 2,
+    "rollout_length": 50,
+    "dt": 0.1,
+    "epsilon": 0.1,
+    "factor": 0.7,
+    "keep_best_n": 10,
+    "exploration_noise": 0.15,
+    "normalize_weights": true,
+    "enable_early_stopping": true,
+    "early_stop_patience": 5,
+    "multi_run": true,
+    "num_runs": 20,
+    "skip_gradient": true
+  },
+  "environment": {
+    "device": "cuda",
+    "seed": 999,
+    "num_workers": 1,
+    "precision": "float64"
+  }
+}

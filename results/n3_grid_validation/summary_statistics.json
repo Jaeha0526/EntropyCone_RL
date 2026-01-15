@@ -1,0 +1,35 @@
+{
+  "grid_size": 20,
+  "total_points": 400,
+  "completed_points": 324,
+  "valid_points": 324,
+  "by_region": {
+    "MMI_violated": {
+      "count": 218,
+      "valid_count": 218,
+      "mean_error": -0.007883618508544118,
+      "std_error": 0.009307641259943001
+    },
+    "SA_violated": {
+      "count": 96,
+      "valid_count": 96,
+      "mean_error": -0.013397288977897812,
+      "std_error": 0.008340632978051585
+    },
+    "inside_HEC": {
+      "count": 10,
+      "valid_count": 10,
+      "mean_error": -0.0001445838926082854,
+      "std_error": 0.00023625575792471075
+    }
+  },
+  "overall": {
+    "mean_rl_reward": 0.8769602358895893,
+    "mean_analytical_reward": 0.8862386754441168,
+    "correlation": 0.9962329014010528,
+    "mean_error": -0.00927843955452744,
+    "std_error": 0.009370915747710595,
+    "mae": 0.00927843955452744,
+    "max_abs_error": 0.03275287209011424
+  }
+}

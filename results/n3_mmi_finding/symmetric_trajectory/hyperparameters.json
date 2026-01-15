@@ -1,0 +1,77 @@
+{
+    "config_file": "configurations/prototype2/n3_MMI_finding_v01/symmetric_N5_section34.json",
+    "training_args": {
+        "NN": 5,
+        "batch_size": 60,
+        "lr": 0.0001,
+        "max_training_cycles": 2000,
+        "hidden_dim": 64,
+        "num_layers": 2,
+        "rollout_length": 50,
+        "dt": 0.1,
+        "epsilon": 0.1,
+        "factor": 0.7,
+        "keep_best_n": 10,
+        "exploration_noise": 0.15,
+        "normalize_weights": true,
+        "enable_early_stopping": true,
+        "early_stop_patience": 5,
+        "dS": 0.001,
+        "gradient_method": "rl_v2",
+        "n_gradient_samples": 50,
+        "precision": "float64"
+    },
+    "experiment_settings": {
+        "name": "n=3 MMI Finding Symmetric Point for Section 3.4",
+        "description": "Gradient following from symmetric point [1/7,...] to MMI boundary with settings matching section 3.3",
+        "ray_source": "custom",
+        "custom_ray": [
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285
+        ],
+        "n_parties": 3,
+        "velocity": 0.7,
+        "moves": 10,
+        "momentum": 0.3,
+        "output_dir": "results/n3_mmi_finding/symmetric_section34",
+        "seed": 42,
+        "movement_mode": "safe_direction",
+        "safe_direction": {
+            "known_facets_file": "extremal_rays/n3/MMI_finding/ray8_known_facets.txt",
+            "saturation_tolerance": 0.0001,
+            "safety_factor": 0.9,
+            "verbose": true,
+            "use_escape_mode": true,
+            "min_increase_rate": 0.05,
+            "buffer_factor": 1.5,
+            "escape_threshold_factor": 1.5
+        },
+        "latest_completed_stage": 9
+    },
+    "derived_settings": {
+        "initial_ray": [
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285
+        ],
+        "initial_sum": 0.9999999999999998,
+        "jax_acceleration": true,
+        "trajectory_early_stopping": {
+            "enabled": true,
+            "gradient_convergence_threshold": 1e-06,
+            "reward_plateau_threshold": 1e-08,
+            "min_stages_before_convergence_check": 5,
+            "min_stages_before_plateau_check": 10,
+            "plateau_window_size": 5
+        }
+    }
+}
