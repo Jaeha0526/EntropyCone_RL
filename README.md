@@ -109,12 +109,14 @@ The reward function serves dual purposes:
 
 | Ray | Status | N | Evidence |
 |-----|--------|---|----------|
-| 146 | In HEC | 18 | Graph realization found |
-| 180 | In HEC | 14 | Graph realization found |
-| 181 | In HEC | 18 | Perfect realization (r=1.0) |
+| 146 | In HEC | 18 | Graph realization found (reward=0.9997) |
+| 180 | In HEC | 14 | **Perfect integer realization** (12:7 weights) |
+| 181 | In HEC | 18 | **Perfect integer realization** (9,6,5,4,0 weights) |
 | 110 | Likely outside | - | max_reward = 0.9998, surrounded by non-HEC rays |
 | 145 | Likely outside | - | max_reward = 0.9996, surrounded by non-HEC rays |
 | 168 | Likely outside | - | max_reward = 0.9995, surrounded by non-HEC rays |
+
+📖 **Detailed realization analysis**: [results/n6_sa_cone/realizations/](results/n6_sa_cone/realizations/)
 
 ## Citation
 
