@@ -73,12 +73,16 @@ python src/HECenv_parallel_config.py --config configs/n6_sa_cone_classification/
 python analysis/n6/analyze_across_N.py
 ```
 
+📖 **Detailed documentation**: [src/README_HECenv_parallel_config.md](src/README_HECenv_parallel_config.md)
+
 ### N=3 MMI Finding (Section 3.4)
 
 ```bash
 # Run gradient-following from symmetric point
 python src/prototype2_jax_config.py --config configs/n3_mmi_finding/symmetric_N5.json
 ```
+
+📖 **Detailed documentation**: [src/README_prototype2_jax_config.md](src/README_prototype2_jax_config.md)
 
 ### N=3 Grid Validation (Section 3.3)
 
