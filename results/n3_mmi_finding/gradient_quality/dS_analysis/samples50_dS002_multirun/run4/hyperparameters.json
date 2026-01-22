@@ -1,0 +1,81 @@
+{
+    "config_file": "configurations/prototype2/n3_MMI_finding_v01/things_for_paper_sample_analysis_dS002/samples50_run4.json",
+    "training_args": {
+        "NN": 5,
+        "batch_size": 60,
+        "lr": 0.0001,
+        "max_training_cycles": 2000,
+        "hidden_dim": 64,
+        "num_layers": 2,
+        "rollout_length": 50,
+        "dt": 0.1,
+        "epsilon": 0.1,
+        "factor": 0.7,
+        "keep_best_n": 10,
+        "exploration_noise": 0.15,
+        "normalize_weights": true,
+        "enable_early_stopping": true,
+        "early_stop_patience": 5,
+        "dS": 0.02,
+        "gradient_method": "rl_v2",
+        "n_gradient_samples": 50,
+        "gradient_cold_start": true,
+        "gradient_distance_mode": "uniform_half",
+        "gradient_n_repeats": 1,
+        "gradient_n_gpus": 1,
+        "precision": "float64"
+    },
+    "experiment_settings": {
+        "name": "Sample Size Analysis (paper): 50 samples, run 4, dS=0.02",
+        "description": "Test gradient quality with 50 samples, seed=442, dS=0.02",
+        "ray_source": "custom",
+        "custom_ray": [
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285
+        ],
+        "n_parties": 3,
+        "velocity": 0.01,
+        "moves": 1,
+        "momentum": 0.3,
+        "output_dir": "results/n3_mmi_finding/things_for_paper/dS_analysis/samples50_dS002_multirun/run4",
+        "seed": 442,
+        "movement_mode": "safe_direction",
+        "safe_direction": {
+            "known_facets_file": "extremal_rays/n3/MMI_finding/ray8_known_facets.txt",
+            "saturation_tolerance": 0.0001,
+            "safety_factor": 0.9,
+            "verbose": true,
+            "use_escape_mode": true,
+            "min_increase_rate": 0.05,
+            "buffer_factor": 1.5,
+            "escape_threshold_factor": 1.5
+        },
+        "latest_completed_stage": 0
+    },
+    "derived_settings": {
+        "initial_ray": [
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285,
+            0.14285714285714285
+        ],
+        "initial_sum": 0.9999999999999998,
+        "jax_acceleration": true,
+        "trajectory_early_stopping": {
+            "enabled": true,
+            "gradient_convergence_threshold": 1e-06,
+            "reward_plateau_threshold": 1e-08,
+            "min_stages_before_convergence_check": 5,
+            "min_stages_before_plateau_check": 10,
+            "plateau_window_size": 5
+        }
+    }
+}

@@ -329,6 +329,15 @@ def main():
     velocity = experiment_config['velocity']
     momentum = experiment_config['momentum']
     MODE = experiment_config.get('mode', 'reward_only')
+
+    # Distance mode: 'velocity' (step = velocity × ||gradient||) or 'fixed' (step = step_size)
+    distance_mode = experiment_config.get('distance_mode', 'velocity')
+    step_size = experiment_config.get('step_size', 0.01)  # fixed step size when distance_mode='fixed'
+
+    # Precise mode: run RL multiple times at each position and take max reward
+    precise_mode = experiment_config.get('precise_mode', False)
+    precise_mode_runs = experiment_config.get('precise_mode_runs', 10)  # number of runs when precise_mode=True
+
     threshold = experiment_config.get('threshold', -20)  # Not used in reward_only mode
     gradient_clip_norm = experiment_config.get('gradient_clip_norm', None)  # Optional gradient clipping
     use_log_weighting = experiment_config.get('use_log_weighting', True)  # Default to True for backward compatibility
@@ -495,13 +504,33 @@ def main():
         
         print(f"\n=== Stage {i} ===")
         print(f"Current position sum: {sum(prev_points):.6f}")
-        
-        # Run training stage
-        result_from_run_stage = run_stage(args)
-        current_run_result = dict(result_from_run_stage)
 
-        reward = np.array(current_run_result["best_optimized_reward"])
-        S_grad = current_run_result["S_grad_from_best"]
+        # Run training stage (with precise mode if enabled)
+        if precise_mode:
+            print(f"[Precise Mode] Running {precise_mode_runs} RL optimizations...")
+            best_reward = -np.inf
+            best_result = None
+            all_precise_rewards = []
+            for run_idx in range(precise_mode_runs):
+                result_from_run_stage = run_stage(args)
+                run_result = dict(result_from_run_stage)
+                run_reward = np.array(run_result["best_optimized_reward"])
+                all_precise_rewards.append(float(run_reward))
+                print(f"  Run {run_idx + 1}/{precise_mode_runs}: reward = {run_reward:.6f}")
+                if run_reward > best_reward:
+                    best_reward = run_reward
+                    best_result = run_result
+            current_run_result = best_result
+            reward = best_reward
+            S_grad = current_run_result["S_grad_from_best"]
+            current_run_result['precise_mode_all_rewards'] = all_precise_rewards
+            current_run_result['precise_mode_runs'] = precise_mode_runs
+            print(f"[Precise Mode] Best: {reward:.6f}, Mean: {np.mean(all_precise_rewards):.6f}, Std: {np.std(all_precise_rewards):.6f}")
+        else:
+            result_from_run_stage = run_stage(args)
+            current_run_result = dict(result_from_run_stage)
+            reward = np.array(current_run_result["best_optimized_reward"])
+            S_grad = current_run_result["S_grad_from_best"]
 
         print(f"Reward: {reward:.6f}")
         print(f"Log(1-reward): {np.log(1-reward):.6f}")
@@ -598,7 +627,14 @@ def main():
         # Update position based on movement mode
         if movement_mode == 'standard':
             # Standard mode: direct gradient application with safety scaling
-            movement = velocity * gradient
+            if distance_mode == 'fixed':
+                grad_norm = np.linalg.norm(gradient)
+                if grad_norm > 1e-10:
+                    movement = step_size * (gradient / grad_norm)  # Fixed step size × unit gradient
+                else:
+                    movement = np.zeros_like(gradient)
+            else:  # 'velocity' mode (default)
+                movement = velocity * gradient
 
             # Find scale factor to ensure no coordinate drops below 10% of original value
             # (only constrain coordinates >= 1e-6 with negative movement)
@@ -618,7 +654,9 @@ def main():
             # Log movement metadata
             movement_metadata = {
                 'mode': 'standard',
+                'distance_mode': distance_mode,
                 'velocity': velocity,
+                'step_size': step_size if distance_mode == 'fixed' else None,
                 'scale_factor': scale,
                 'movement_distance': np.linalg.norm(scale * movement)
             }
@@ -630,8 +668,11 @@ def main():
                 prev_points, gradient
             )
 
-            # Compute requested movement distance from velocity
-            requested_distance = velocity * np.linalg.norm(gradient)
+            # Compute requested movement distance based on distance_mode
+            if distance_mode == 'fixed':
+                requested_distance = step_size  # Fixed step size regardless of gradient magnitude
+            else:  # 'velocity' mode (default)
+                requested_distance = velocity * np.linalg.norm(gradient)
 
             # Use the smaller of safe_distance and requested_distance
             actual_distance = min(safe_distance, requested_distance)
@@ -642,6 +683,8 @@ def main():
             # Log movement metadata
             movement_metadata = {
                 'mode': 'safe_direction',
+                'distance_mode': distance_mode,
+                'step_size': step_size if distance_mode == 'fixed' else None,
                 'escape_mode_enabled': use_escape_mode,
                 'escape_mode_successful': qp_metadata.get('escape_mode_successful', None),
                 'fallback_occurred': qp_metadata.get('fallback_occurred', False),

@@ -45,14 +45,21 @@ EntropyConeRL/
 ├── configs/                      # Experiment configurations
 │   ├── n3_grid_validation/       # Section 3.3 configs
 │   ├── n3_mmi_finding/           # Section 3.4 configs
+│   │   ├── symmetric_N5.json     # Symmetric point trajectory
+│   │   ├── ray7_fixed_step01.json# Ray 7 fixed step trajectory
+│   │   └── gradient_quality/     # Appendix B gradient experiments
 │   └── n6_sa_cone_classification/# Section 4 configs
 ├── results/                      # Paper results
 │   ├── n3_grid_validation/       # Grid validation results & plots
 │   ├── n3_mmi_finding/           # MMI trajectory results
+│   │   ├── symmetric_trajectory/ # Symmetric point results
+│   │   ├── ray7_trajectory/      # Ray 7 trajectory results
+│   │   └── gradient_quality/     # Appendix B: dS and sample analysis
 │   └── n6_sa_cone/               # Classification & realizations
-└── analysis/                     # Analysis scripts
-    ├── n3/                       # N=3 plotting scripts
-    └── n6/                       # N=6 analysis scripts
+├── analysis/                     # Analysis scripts
+│   ├── n3/                       # N=3 plotting scripts (incl. Appendix B)
+│   └── n6/                       # N=6 analysis scripts
+└── paper/plots/                  # Paper figures
 ```
 
 ## Installation
@@ -94,6 +101,20 @@ python analysis/n3/analyze_grid_validation.py
 python analysis/n3/plot_rl_reward_landscape.py
 ```
 
+### Appendix B: Gradient Estimation Quality
+
+```bash
+# Run dS sweep experiment (vary perturbation size)
+python src/prototype2_jax_config.py --config configs/n3_mmi_finding/gradient_quality/dS_analyze/dS0010_max10.json
+
+# Run sample count experiment (vary number of samples)
+python src/prototype2_jax_config.py --config configs/n3_mmi_finding/gradient_quality/things_for_paper_sample_analysis_dS002/samples30_run1.json
+
+# Generate Appendix B plots
+python analysis/n3/plot_dS_analysis_combined.py
+python analysis/n3/plot_samples_vs_alignment.py
+```
+
 ## Key Algorithm
 
 The RL algorithm uses:
@@ -104,6 +125,38 @@ The RL algorithm uses:
 The reward function serves dual purposes:
 1. **Classification**: r = 1 means inside HEC, r < 1 means outside
 2. **Navigation**: ∇r points toward nearest HEC boundary
+
+## S-Vector Coordinate System (Important)
+
+The S-vector uses **binary indexing**: index `i` represents the subset where party `j` is included if bit `j` is set in the binary representation of `i+1`.
+
+### n=3 Case (7 components)
+
+| Index | Binary | Subset | Notation |
+|-------|--------|--------|----------|
+| 0 | 001 | {A} | S_A |
+| 1 | 010 | {B} | S_B |
+| 2 | 011 | {A,B} | **S_AB** |
+| 3 | 100 | {C} | **S_C** |
+| 4 | 101 | {A,C} | S_AC |
+| 5 | 110 | {B,C} | S_BC |
+| 6 | 111 | {A,B,C} | S_ABC |
+
+**Actual ordering**: `[S_A, S_B, S_AB, S_C, S_AC, S_BC, S_ABC]`
+
+⚠️ **Common mistake**: S_AB (index 2) comes BEFORE S_C (index 3) because binary 011 < 100.
+
+### Quick Reference
+
+| n | Size | First few components |
+|---|------|---------------------|
+| 2 | 3 | `[S_A, S_B, S_AB]` |
+| 3 | 7 | `[S_A, S_B, S_AB, S_C, S_AC, S_BC, S_ABC]` |
+| 4 | 15 | `[S_A, S_B, S_AB, S_C, S_AC, S_BC, S_ABC, S_D, ...]` |
+| 5 | 31 | `[S_A, S_B, S_AB, ..., S_E, ..., S_ABCDE]` |
+| 6 | 63 | `[S_A, S_B, S_AB, ..., S_F, ..., S_ABCDEF]` |
+
+**Implementation**: See `HECenv_parallel.py:Sfromw_single()` for the indexing code.
 
 ## Mystery Rays Results
 
