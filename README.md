@@ -2,8 +2,11 @@
 
 Reinforcement Learning for Exploring the Holographic Entropy Cone
 
-**Paper**: "Exploring the Holographic Entropy Cone via Machine Learning"
+**Paper**: "Exploring the Holographic Entropy Cone via Reinforcement Learning"
+
 **Authors**: Temple He, Jaeha Lee, Hirosi Ooguri (Caltech)
+
+**Published**: *Journal of High Energy Physics* **2026**, 267 (2026) · [doi:10.1007/JHEP06(2026)267](https://doi.org/10.1007/JHEP06(2026)267) · [arXiv:2601.19979](https://arxiv.org/abs/2601.19979)
 
 ## Overview
 
@@ -22,7 +25,7 @@ This repository implements a reinforcement learning algorithm to study the Holog
 
 ### Section 3.4: N=3 MMI Rediscovery
 - Gradient-following from symmetric point toward MMI boundary
-- Demonstrates the algorithm can discover unknown holographic entropy inequalities
+- Starting from a target vector outside the HEC, the algorithm rediscovers monogamy of mutual information (MMI)
 
 ### Section 4: N=6 SA Cone Classification
 - Classifies 208 SA cone extremal rays
@@ -175,9 +178,16 @@ The S-vector uses **binary indexing**: index `i` represents the subset where par
 
 ```bibtex
 @article{He:2025entropy,
-  title={Exploring the Holographic Entropy Cone via Machine Learning},
+  title={Exploring the holographic entropy cone via reinforcement learning},
   author={He, Temple and Lee, Jaeha and Ooguri, Hirosi},
-  year={2025}
+  journal={Journal of High Energy Physics},
+  volume={2026},
+  number={6},
+  pages={267},
+  year={2026},
+  doi={10.1007/JHEP06(2026)267},
+  eprint={2601.19979},
+  archivePrefix={arXiv}
 }
 ```
 
